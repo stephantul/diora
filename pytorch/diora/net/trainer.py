@@ -7,11 +7,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from diora.net.diora import DioraTreeLSTM
-from diora.net.diora import DioraMLP
-from diora.net.diora import DioraMLPShared
+from .diora import DioraTreeLSTM
+from .diora import DioraMLP
+from .diora import DioraMLPShared
 
-from diora.logging.configuration import get_logger
+from ..logging.configuration import get_logger
 
 
 class ReconstructionLoss(nn.Module):

@@ -1,7 +1,7 @@
 import os
 import logging
 
-from diora.utils.fs import mkdir_p
+from ..utils.fs import mkdir_p
 
 
 LOGGING_NAMESPACE = 'diora'
@@ -12,7 +12,8 @@ def configure_experiment(experiment_path, rank=None):
     if rank is None:
         log_file = os.path.join(experiment_path, 'experiment.log')
     else:
-        log_file = os.path.join(experiment_path, 'experiment.log.{}'.format(rank))
+        log_file = os.path.join(experiment_path, 'experiment.log.{}'
+                                                 ''.format(rank))
     configure_logger(log_file)
 
 
@@ -42,8 +43,8 @@ def configure_logger(log_file):
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-    # HACK: Weird fix that counteracts other libraries (i.e. allennlp) modifying
-    # the global logger.
+    # HACK: Weird fix that counteracts other libraries
+    # (i.e. allennlp) modifying the global logger.
     if len(logger.parent.handlers) > 0:
         logger.parent.handlers.pop()
 

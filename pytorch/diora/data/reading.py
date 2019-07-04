@@ -1,13 +1,12 @@
 """
 Each reader should return:
 
-    - sentences - This is the primary input (raw text) to the model. Not tokenized.
+    - sentences - This is the primary input (raw text) to the model.
+    Not tokenized.
     - extra - Additional model input such as entity or sentence labels.
-    - metadata - Info about the data that is not specific to examples / batches.
+    - metadata - Info about the data that is not specific to examples/batches.
 
 """
-
-import os
 import json
 
 from tqdm import tqdm
@@ -138,8 +137,14 @@ class BaseTextReader(object):
 
 
 class PlainTextReader(BaseTextReader):
-    def __init__(self, lowercase=True, filter_length=0, delim=' ', include_id=False):
-        super(PlainTextReader, self).__init__(lowercase=lowercase, filter_length=filter_length, include_id=include_id)
+    def __init__(self,
+                 lowercase=True,
+                 filter_length=0,
+                 delim=' ',
+                 include_id=False):
+        super().__init__(lowercase=lowercase,
+                         filter_length=filter_length,
+                         include_id=include_id)
         self.delim = delim
 
     def read_line(self, line):
@@ -176,14 +181,21 @@ class NLIReader(object):
 
         try:
             label = self.read_label(example['gold_label'])
-        except:
+        except KeyError:
             return None
 
-        s1, t1 = convert_binary_bracketing(example['sentence1_binary_parse'], lowercase=self.lowercase)
-        s2, t2 = convert_binary_bracketing(example['sentence2_binary_parse'], lowercase=self.lowercase)
+        s1, t1 = convert_binary_bracketing(example['sentence1_binary_parse'],
+                                           lowercase=self.lowercase)
+        s2, t2 = convert_binary_bracketing(example['sentence2_binary_parse'],
+                                           lowercase=self.lowercase)
         example_id = example['pairID']
 
-        return dict(s1=s1, label=label, s2=s2, t1=t1, t2=t2, example_id=example_id)
+        return dict(s1=s1,
+                    label=label,
+                    s2=s2,
+                    t1=t1,
+                    t2=t2,
+                    example_id=example_id)
 
     def read_label(self, label):
         return self.LABEL_MAP[label]
@@ -201,10 +213,10 @@ class NLISentenceReader(NLIReader):
                 if smap is None:
                     continue
 
-                s1, s2, label = smap['s1'], smap['s2'], smap['label']
+                s1, s2 = smap['s1'], smap['s2']
                 example_id = smap['example_id']
-                skip_s1 = self.filter_length > 0 and len(s1) > self.filter_length
-                skip_s2 = self.filter_length > 0 and len(s2) > self.filter_length
+                skip_s1 = 0 < self.filter_length < len(s1)
+                skip_s2 = 0 < self.filter_length < len(s2)
 
                 if not skip_s1:
                     example_ids.append(example_id + '_1')
@@ -255,9 +267,15 @@ class ConllReader(object):
 
 
 class SyntheticReader(object):
-    def __init__(self, nexamples=100, embedding_size=10, vocab_size=14, seed=11, minlen=10,
-                 maxlen=20, length=None):
-        super(SyntheticReader, self).__init__()
+    def __init__(self,
+                 nexamples=100,
+                 embedding_size=10,
+                 vocab_size=14,
+                 seed=11,
+                 minlen=10,
+                 maxlen=20,
+                 length=None):
+        super().__init__()
         self.nexamples = nexamples
         self.embedding_size = embedding_size
         self.vocab_size = vocab_size
@@ -274,8 +292,11 @@ class SyntheticReader(object):
             min_length = self.length
             max_length = min_length + 1
 
-        sentences = synthesize_training_data(self.nexamples, self.vocab_size,
-            min_length=min_length, max_length=max_length, seed=self.seed)
+        sentences = synthesize_training_data(self.nexamples,
+                                             self.vocab_size,
+                                             min_length=min_length,
+                                             max_length=max_length,
+                                             seed=self.seed)
 
         metadata = {}
         metadata['embeddings'] = np.random.randn(self.vocab_size, self.embedding_size).astype(np.float32)
@@ -285,4 +306,3 @@ class SyntheticReader(object):
             "extra": extra,
             "metadata": metadata
             }
-

@@ -22,7 +22,7 @@ class Accumulator(object):
         self.table = {}
 
     def record(self, key, val):
-        if not key in self.table:
+        if key not in self.table:
             self.table[key] = MeanAccumulator()
         self.table[key].record(val)
 
@@ -44,4 +44,3 @@ class Accumulator(object):
 
         for key in keys:
             del self.table[key]
-

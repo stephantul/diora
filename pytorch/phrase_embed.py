@@ -32,14 +32,8 @@ Can control the number of neighbors to show with the `--k_top` flag.
 Can control the number of candidates to consider with `--k_candidates` flag.
 
 """
-
-
-import json
-import types
 import itertools
-
 import torch
-
 import numpy as np
 
 from train import argument_parser, parse_args, configure
@@ -47,12 +41,7 @@ from train import get_validation_dataset, get_validation_iterator
 from train import build_net
 
 from diora.logging.configuration import get_logger
-
-try:
-    import faiss
-    from faiss import normalize_L2
-except:
-    print('Could not import `faiss`, which is used to find nearest neighbors.')
+from reach import Reach
 
 
 def get_cell_index(entity_labels, i_label=0, i_pos=1, i_size=2):
@@ -127,34 +116,10 @@ class BatchRecorder(object):
                 flatten = self.dtype2flatten[self.dtype.get(k, 'list')]
                 yield k, flatten(v)
         return {k: v for k, v in helper()}
-            
+
     def record(self, **kwargs):
         for k, v in kwargs.items():
             self.cache.setdefault(k, []).append(v)
-
-
-class Index(object):
-    def __init__(self, dim=None):
-        super(Index, self).__init__()
-        self.D, self.I = None, None
-        self.index = faiss.IndexFlatIP(dim)
-
-    def add(self, vecs):
-        self.index.add(vecs)
-
-    def cache(self, vecs, k):
-        self.D, self.I = self.index.search(vecs, k)
-
-    def topk(self, q, k):
-        for j in range(k):
-            idx = self.I[q][j]
-            dist = self.D[q][j]
-            yield idx, dist
-
-
-class NearestNeighborsLookup(object):
-    def __init__(self):
-        super(NearestNeighborsLookup, self).__init__()
 
 
 def run(options):
@@ -172,7 +137,6 @@ def run(options):
     diora = trainer.net.diora
 
     # 1. Get all relevant phrase vectors.
-
     dtype = {
         'example_ids': 'list',
         'labels': 'list',
@@ -183,91 +147,41 @@ def run(options):
         'outside': 'torch',
     }
     batch_recorder = BatchRecorder(dtype=dtype)
-
-    ## Eval mode.
+    # Eval mode.
     trainer.net.eval()
 
     batches = validation_iterator.get_iterator(random_seed=options.seed)
 
     logger.info('Beginning to embed phrases.')
 
+    strings = []
     with torch.no_grad():
         for i, batch_map in enumerate(batches):
             sentences = batch_map['sentences']
-            batch_size = sentences.shape[0]
             length = sentences.shape[1]
 
             # Skips very short examples.
             if length <= 2:
                 continue
-
-            _ = trainer.step(batch_map, train=False, compute_loss=False)
-
-            entity_labels = batch_map['entity_labels']
-            batch_index, positions, sizes, labels = get_cell_index(entity_labels)
-
-            # Skip short phrases.
-            batch_index = [x for x, y in zip(batch_index, sizes) if y >= 2]
-            positions = [x for x, y in zip(positions, sizes) if y >= 2]
-            labels = [x for x, y in zip(labels, sizes) if y >= 2]
-            sizes = [y for y in sizes if y >= 2]
-
-            cell_index = (batch_index, positions, sizes)
+            strings.extend(["".join([idx2word[idx] for idx in x])
+                           for x in sentences.numpy()])
+            trainer.step(batch_map, train=False, compute_loss=False)
 
             batch_result = {}
-            batch_result['example_ids'] = [batch_map['example_ids'][idx] for idx in cell_index[0]]
-            batch_result['labels'] = labels
-            batch_result['positions'] = cell_index[1]
-            batch_result['sizes'] = cell_index[2]
-            batch_result['phrases'] = get_many_phrases(sentences, *cell_index)
-            batch_result['inside'] = get_many_cells(diora, diora.inside_h, *cell_index)
-            batch_result['outside'] = get_many_cells(diora, diora.outside_h, *cell_index)
-
+            batch_result['inside'] = diora.inside_h[:, -1]
+            batch_result['outside'] = diora.outside_h[:, -1]
             batch_recorder.record(**batch_result)
 
     result = batch_recorder.get_flattened_result()
 
     # 2. Build an index of nearest neighbors.
-
     vectors = np.concatenate([result['inside'], result['outside']], axis=1)
-    normalize_L2(vectors)
+    print(len(strings), vectors.shape)
+    r = Reach(vectors, strings)
 
-    index = Index(dim=vectors.shape[1])
-    index.add(vectors)
-    index.cache(vectors, options.k_candidates)
-
-    # 3. Print a summary.
-
-    example_ids = result['example_ids']
-    phrases = result['phrases']
-
-    assert len(example_ids) == len(phrases)
-    assert len(example_ids) == vectors.shape[0]
-
-    def stringify(phrase):
-        return ' '.join([idx2word[idx] for idx in phrase])
-
-    for i in range(vectors.shape[0]):
-        topk = []
-
-        for j, score in index.topk(i, options.k_candidates):
-            # Skip same example.
-            if example_ids[i] == example_ids[j]:
-                continue
-            # Skip string match.
-            if phrases[i] == phrases[j]:
-                continue
-            topk.append((j, score))
-            if len(topk) == options.k_top:
-                break
-        assert len(topk) == options.k_top, 'Did not find enough valid candidates.'
-
-        # Print.
-        print('[query] example_id={} phrase={}'.format(
-            example_ids[i], stringify(phrases[i])))
-        for rank, (j, score) in enumerate(topk):
-            print('rank={} score={:.3f} example_id={} phrase={}'.format(
-                rank, score, example_ids[j], stringify(phrases[j])))
+    for s in strings:
+        print(s)
+        print(r.most_similar(s))
 
 
 if __name__ == '__main__':

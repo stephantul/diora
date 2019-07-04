@@ -1,6 +1,6 @@
 import math
 import random
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 
 import numpy as np
 from tqdm import tqdm
@@ -48,7 +48,8 @@ def batchify(examples, batch_size):
 
 def pad(examples, padding_token=0):
     def convert2numpy(batch):
-        # Note that this is tranposed to have dimensions (batch_size, sentence_length).
+        # Note that this is tranposed to have dimensions
+        # (batch_size, sentence_length).
         return np.array(batch, dtype=np.int32).T
 
     maxlength = np.max([len(x) for x in examples])
@@ -84,7 +85,11 @@ def prepare_batch(batch):
     return batch
 
 
-def synthesize_training_data(nexamples, vocab_size, min_length=10, max_length=30, seed=None):
+def synthesize_training_data(nexamples,
+                             vocab_size,
+                             min_length=10,
+                             max_length=30,
+                             seed=None):
     if seed is not None:
         set_random_seed(seed)
 

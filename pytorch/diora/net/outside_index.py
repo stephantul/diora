@@ -1,5 +1,5 @@
 import torch
-from diora.net.offset_cache import get_offset_cache
+from .offset_cache import get_offset_cache
 
 
 class OutsideIndex(object):
@@ -125,4 +125,3 @@ def get_outside_index(length, level, offset_cache=None, cuda=False):
     sis_index = torch.tensor(index, dtype=torch.int64, device=device)
 
     return par_index, sis_index
-

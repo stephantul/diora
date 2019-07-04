@@ -2,8 +2,8 @@ import time
 
 from collections import Counter
 
-from diora.logging.accumulator import Accumulator
-from diora.logging.configuration import get_logger
+from ..logging.accumulator import Accumulator
+from ..logging.configuration import get_logger
 
 
 class ExperimentLogger(object):

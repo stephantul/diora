@@ -5,20 +5,17 @@ import numpy as np
 
 from tqdm import tqdm
 
-from diora.data.reading import NLIReader, PlainTextReader, ConllReader
-from diora.data.batch_iterator import BatchIterator
-from diora.data.embeddings import EmbeddingsReader, UNK_TOKEN
-from diora.data.preprocessing import indexify, build_text_vocab
-from diora.data.preprocessing import synthesize_training_data
-from diora.logging.configuration import get_logger
-from diora.blocks.negative_sampler import NegativeSampler, calculate_freq_dist
+from .reading import NLIReader, PlainTextReader, ConllReader
+from .batch_iterator import BatchIterator
+from .embeddings import EmbeddingsReader, UNK_TOKEN
+from .preprocessing import indexify, build_text_vocab
+from .preprocessing import synthesize_training_data
+from ..logging.configuration import get_logger
+from ..blocks.negative_sampler import NegativeSampler, calculate_freq_dist
 
 
 class ConsolidateDatasets(object):
-    """
-    A class for consolidating many datasets.
-    """
-
+    """A class for consolidating many datasets."""
     def __init__(self, datasets):
         self.datasets = datasets
 
@@ -26,6 +23,7 @@ class ConsolidateDatasets(object):
         def fn(s):
             for idx in s:
                 yield inverse_mapping[idx]
+
         def queue(lst):
             q = deque(lst)
             while len(q) > 0:
@@ -37,7 +35,9 @@ class ConsolidateDatasets(object):
         embeddings = np.zeros((len(master_word2idx), size), dtype=np.float32)
         for dset, old2master in zip(datasets, inverse_mapping_lst):
             idx_from, idx_to = zip(*old2master.items())
-            embeddings[np.asarray(idx_to)] = dset['embeddings'][np.asarray(idx_from)]
+            idx_from = np.asarray(idx_from)
+            idx_to = np.asarray(idx_to)
+            embeddings[idx_to] = dset['embeddings'][idx_from]
         return embeddings
 
     def consolidate_word2idx(self, word2idx_lst):
@@ -59,7 +59,8 @@ class ConsolidateDatasets(object):
         master_word2idx, inverse_mapping_lst = self.consolidate_word2idx(word2idx_lst)
         embeddings = self.remap_embeddings(self.datasets, inverse_mapping_lst, master_word2idx)
         for dset, inverse_mapping in zip(self.datasets, inverse_mapping_lst):
-            dset['sentences'] = self.reindex(dset['sentences'], inverse_mapping)
+            dset['sentences'] = self.reindex(dset['sentences'],
+                                             inverse_mapping)
             dset['word2idx'] = master_word2idx
             dset['embeddings'] = embeddings
 
@@ -144,7 +145,7 @@ def make_batch_iterator(options, dset, shuffle=True, include_partial=False, filt
         ngpus = torch.cuda.device_count()
 
     vocab_size = len(word2idx)
-    
+
     negative_sampler = None
     if options.reconstruct_mode == 'margin':
         freq_dist = calculate_freq_dist(sentences, vocab_size)

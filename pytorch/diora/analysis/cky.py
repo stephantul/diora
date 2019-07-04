@@ -1,8 +1,5 @@
-import json
-
 import torch
-
-from diora.logging.configuration import get_logger
+from ..logging.configuration import get_logger
 
 
 class ParsePredictor(object):
@@ -23,7 +20,10 @@ class ParsePredictor(object):
 
         # Assign missing scalars
         for i in range(length):
-            scalars[0][i] = torch.full((batch_size, 1), 1, dtype=dtype, device=device)
+            scalars[0][i] = torch.full((batch_size, 1),
+                                       1,
+                                       dtype=dtype,
+                                       device=device)
 
         trees = self.batched_cky(batch_map, scalars)
 
@@ -37,7 +37,10 @@ class ParsePredictor(object):
         dtype = torch.float32
 
         # Chart.
-        chart = [torch.full((length-i, batch_size), 1, dtype=dtype, device=device) for i in range(length)]
+        chart = [torch.full((length-i, batch_size),
+                            1,
+                            dtype=dtype,
+                            device=device) for i in range(length)]
 
         # Backpointers.
         bp = {}
@@ -53,7 +56,8 @@ class ParsePredictor(object):
 
                 pairs, lps, rps, sps = [], [], [], []
 
-                # Assumes that the bottom-left most leaf is in the first constituent.
+                # Assumes that the bottom-left most
+                # leaf is in the first constituent.
                 spbatch = scalars[level][pos]
 
                 for idx in range(N):
@@ -68,8 +72,8 @@ class ParsePredictor(object):
                     assert r_level >= 0
                     assert r_pos >= 0
 
-                    l = (l_level, l_pos)
-                    r = (r_level, r_pos)
+                    left = (l_level, l_pos)
+                    right = (r_level, r_pos)
 
                     lp = chart[l_level][l_pos].view(-1, 1)
                     rp = chart[r_level][r_pos].view(-1, 1)
@@ -79,9 +83,11 @@ class ParsePredictor(object):
                     rps.append(rp)
                     sps.append(sp)
 
-                    pairs.append((l, r))
+                    pairs.append((left, right))
 
-                lps, rps, sps = torch.cat(lps, 1), torch.cat(rps, 1), torch.cat(sps, 1)
+                lps = torch.cat(lps, 1)
+                rps = torch.cat(rps, 1)
+                sps = torch.cat(sps, 1)
 
                 ps = lps + rps + sps
                 argmax = ps.argmax(1).long()
@@ -108,4 +114,3 @@ class ParsePredictor(object):
         rout = self.follow_backpointers(bp, bp[r[0]][r[1]])
 
         return (lout, rout)
-

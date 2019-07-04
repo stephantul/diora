@@ -8,7 +8,6 @@ from train import get_validation_dataset, get_validation_iterator
 from train import build_net
 
 from diora.logging.configuration import get_logger
-
 from diora.analysis.cky import ParsePredictor as CKY
 
 
@@ -76,22 +75,19 @@ def run(options):
     trainer = build_net(options, embeddings, validation_iterator)
 
     # Parse
-
     diora = trainer.net.diora
 
-    ## Monkey patch parsing specific methods.
+    # Monkey patch parsing specific methods.
     override_init_with_batch(diora)
     override_inside_hook(diora)
 
-    ## Turn off outside pass.
+    # Turn off outside pass.
     trainer.net.diora.outside = False
-
-    ## Eval mode.
+    # Eval mode.
     trainer.net.eval()
 
-    ## Topk predictor.
+    # Topk predictor.
     parse_predictor = CKY(net=diora, word2idx=word2idx)
-
     batches = validation_iterator.get_iterator(random_seed=options.seed)
 
     logger.info('Beginning to parse.')
@@ -102,21 +98,22 @@ def run(options):
             batch_size = sentences.shape[0]
             length = sentences.shape[1]
 
-            # Rather than skipping, just log the trees (they are trivially easy to find).
+            # Rather than skipping, just log the trees
+            # (they are trivially easy to find).
             if length <= 2:
                 for i in range(batch_size):
                     example_id = batch_map['example_ids'][i]
                     tokens = sentences[i].tolist()
                     words = [idx2word[idx] for idx in tokens]
                     if length == 2:
-                        o = dict(example_id=example_id, tree=(words[0], words[1]))
+                        o = dict(example_id=example_id, tree=(words[0],
+                                                              words[1]))
                     elif length == 1:
                         o = dict(example_id=example_id, tree=words[0])
                     print(json.dumps(o))
                 continue
 
-            _ = trainer.step(batch_map, train=False, compute_loss=False)
-
+            trainer.step(batch_map, train=False, compute_loss=False)
             trees = parse_predictor.parse_batch(batch_map)
 
             for ii, tr in enumerate(trees):

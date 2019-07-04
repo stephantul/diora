@@ -2,10 +2,9 @@ import os
 import hashlib
 from collections import OrderedDict
 
-from diora.logging.configuration import get_logger
+from ..logging.configuration import get_logger
 
 import numpy as np
-from allennlp.commands.elmo import ElmoEmbedder
 from tqdm import tqdm
 
 
@@ -204,5 +203,3 @@ def context_insensitive_elmo(weights_path, options_path, word2idx, cuda=False, c
         save_elmo_cache(cache_path, vectors)
 
     return vectors
-
-

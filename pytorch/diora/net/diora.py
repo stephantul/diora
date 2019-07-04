@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from diora.net.outside_index import get_outside_index
-from diora.net.inside_index import get_inside_index
-from diora.net.offset_cache import get_offset_cache
+from .outside_index import get_outside_index
+from .inside_index import get_inside_index
+from .offset_cache import get_offset_cache
 
 
 TINY = 1e-8

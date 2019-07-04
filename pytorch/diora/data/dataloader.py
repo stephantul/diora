@@ -1,16 +1,19 @@
-import os
-
 import torch
 from torch.utils.data import Sampler
 
 import numpy as np
 
-from diora.logging.configuration import get_logger
+from ..logging.configuration import get_logger
 
 
 class FixedLengthBatchSampler(Sampler):
 
-    def __init__(self, data_source, batch_size, include_partial=False, rng=None, maxlen=None,
+    def __init__(self,
+                 data_source,
+                 batch_size,
+                 include_partial=False,
+                 rng=None,
+                 maxlen=None,
                  length_to_size=None):
         self.data_source = data_source
         self.active = False
@@ -21,7 +24,7 @@ class FixedLengthBatchSampler(Sampler):
         self.maxlen = maxlen
         self.include_partial = include_partial
         self.length_to_size = length_to_size
-        self._batch_size_cache = { 0: self.batch_size }
+        self._batch_size_cache = {0: self.batch_size}
         self.logger = get_logger()
 
     def get_batch_size(self, length):
@@ -48,14 +51,13 @@ class FixedLengthBatchSampler(Sampler):
         If length_to_size is set, then batch size is determined by length.
 
         """
-
         # Record the lengths of each example.
         length_map = {}
         for i in range(len(self.data_source)):
             x = self.data_source.dataset[i]
             length = len(x)
 
-            if self.maxlen is not None and self.maxlen > 0 and length > self.maxlen:
+            if self.maxlen is not None and (0 < self.maxlen < length):
                 continue
 
             length_map.setdefault(length, []).append(i)
@@ -70,7 +72,9 @@ class FixedLengthBatchSampler(Sampler):
             batch_size = self.get_batch_size(length)
             nbatches = len(arr) // batch_size
             surplus = nbatches * batch_size < len(arr)
-            state[length] = dict(nbatches=nbatches, surplus=surplus, position=-1)
+            state[length] = dict(nbatches=nbatches,
+                                 surplus=surplus,
+                                 position=-1)
 
         # Batch order, in terms of length.
         order = []
@@ -79,7 +83,7 @@ class FixedLengthBatchSampler(Sampler):
 
         self.logger.info('# of batches = {}'.format(len(order)))
 
-        ## Optionally, add partial batches.
+        # Optionally, add partial batches.
         if self.include_partial:
             for length, v in state.items():
                 if v['surplus']:

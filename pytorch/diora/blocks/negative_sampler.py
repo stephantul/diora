@@ -27,11 +27,14 @@ def calculate_freq_dist(data, vocab_size):
 class NegativeSampler:
     def __init__(self, freq_dist, dist_power, epsilon=10**-2):
         self.dist = freq_dist ** dist_power + epsilon * (1/len(freq_dist))
-        self.dist = self.dist / sum(self.dist)      # Final distribution should be normalized
+        self.dist = self.dist / sum(self.dist)
         self.rng = np.random.RandomState()
 
     def set_seed(self, seed):
         self.rng.seed(seed)
 
     def sample(self, num_samples):
-        return self.rng.choice(len(self.dist), num_samples, p=self.dist, replace=False)
+        return self.rng.choice(len(self.dist),
+                               num_samples,
+                               p=self.dist,
+                               replace=False)

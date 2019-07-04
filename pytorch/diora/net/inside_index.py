@@ -1,5 +1,5 @@
 import torch
-from diora.net.offset_cache import get_offset_cache
+from .offset_cache import get_offset_cache
 
 
 class InsideIndex(object):
@@ -90,4 +90,3 @@ def get_inside_index(length, level, offset_cache=None, cuda=False):
             ).transpose(0, 1).contiguous().flatten()
 
     return idx_l, idx_r
-
